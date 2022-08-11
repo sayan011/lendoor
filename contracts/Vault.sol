@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./StableCoinToken.sol";
 import "./PriceConsumerV3.sol";
 
 contract Vault is Ownable {
+
+    StableCoinToken s_token;
+    PriceConsumerV3 s_oracle;
+
     event depositEvent(uint depositAmount, uint amountToMint);
     event withDrawEvent(uint amountToWithdraw, uint repaymentAmount);
 
@@ -36,11 +40,11 @@ contract Vault is Ownable {
         s_token.mint(msg.sender,amountToMint);
         vaults[msg.sender].collateralAmount+=_depositAmount;
         vaults[msg.sender].debtAmount+=amountToMint;
-        emit(_depositAmount,amountToMint);
+        emit depositEvent(_depositAmount,amountToMint);
     }
     
 
-    function withdraw(uint _withdrawAmount) external payable{
+    function withdraw(uint _repaymentAmount) external payable{
         require(_repaymentAmount<=vaults[msg.sender].debtAmount,"Limit Exceeded!!");
         require(s_token.balanceOf(msg.sender)>= _repaymentAmount,"Not enough token in Balance");
         uint256 amountToWithdraw = _repaymentAmount / getEthUSDPrice();
@@ -48,10 +52,10 @@ contract Vault is Ownable {
         vaults[msg.sender].collateralAmount -= amountToWithdraw;
         vaults[msg.sender].debtAmount -= _repaymentAmount;
         payable(msg.sender).transfer(amountToWithdraw);
-        emit(amountToWithdraw,repaymentAmount);
+        emit withDrawEvent(amountToWithdraw,_repaymentAmount);
     }
 
-    function getVault(address userAddress) external view returns(address){
+    function getVault(address userAddress) external view returns(VaultStruct memory){
         return vaults[userAddress];
     }
 
